@@ -1,0 +1,27 @@
+{
+  "name": "shadowchat-backend-firebase-mongo",
+  "version": "1.0.0",
+  "description": "Firebase Auth + MongoDB + Socket.IO backend for ShadowChat",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/config/env.js && node --check src/config/db.js && node --check src/config/firebase.js && node --check src/constants/events.js && node --check src/controllers/auth.controller.js && node --check src/controllers/conversations.controller.js && node --check src/controllers/messages.controller.js && node --check src/controllers/uploads.controller.js && node --check src/controllers/users.controller.js && node --check src/middlewares/auth.js && node --check src/middlewares/errorHandler.js && node --check src/models/Conversation.js && node --check src/models/Message.js && node --check src/models/User.js && node --check src/routes/index.js && node --check src/routes/auth.routes.js && node --check src/routes/conversations.routes.js && node --check src/routes/messages.routes.js && node --check src/routes/uploads.routes.js && node --check src/routes/users.routes.js && node --check src/services/auth.service.js && node --check src/services/conversation.service.js && node --check src/services/message.service.js && node --check src/services/storage.service.js && node --check src/sockets/index.js && node --check src/utils/asyncHandler.js && node --check src/utils/httpError.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.1",
+    "helmet": "^8.1.0",
+    "mongoose": "^8.9.4",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^6.10.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
