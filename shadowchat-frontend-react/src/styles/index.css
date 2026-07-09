@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f4f6fb;
   --surface: #ffffff;
   --surface-soft: #f8fafc;
@@ -23,6 +23,29 @@
   --radius: 8px;
   --radius-sm: 6px;
   --app-gap: 12px;
+}
+:root[data-theme="dark"] {
+  --bg: #121417;
+  --surface: #1b1f24;
+  --surface-soft: #242a31;
+  --surface-muted: #2d343d;
+  --border: #343c46;
+  --border-strong: #46515e;
+  --text: #f1f5f9;
+  --muted: #a8b3c2;
+  --muted-2: #7f8b9b;
+  --primary: #60a5fa;
+  --primary-dark: #93c5fd;
+  --primary-soft: rgba(96, 165, 250, 0.16);
+  --accent: #2dd4bf;
+  --success: #4ade80;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --warning: #fbbf24;
+  --mine: #2563eb;
+  --theirs: #232930;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.34);
 }
 
 * {
@@ -1412,4 +1435,52 @@ small {
   .auth-page-shell {
     padding: 10px;
   }
+}
+:root[data-theme="dark"] .profile-row:hover,
+:root[data-theme="dark"] .conversation-item:hover,
+:root[data-theme="dark"] .search-user-row:hover,
+:root[data-theme="dark"] .selected-chip:hover,
+:root[data-theme="dark"] .participant-row:hover,
+:root[data-theme="dark"] .secondary-button:hover {
+  background: #2a3440;
+}
+
+:root[data-theme="dark"] .message-list {
+  background: #15191e;
+}
+
+:root[data-theme="dark"] .message-day-divider span,
+:root[data-theme="dark"] .typing-pill {
+  background: rgba(35, 41, 48, 0.92);
+}
+
+:root[data-theme="dark"] .reply-chip,
+:root[data-theme="dark"] .reaction-pill {
+  background: #2a3139;
+}
+
+:root[data-theme="dark"] .file-chip,
+:root[data-theme="dark"] .edited-chip {
+  background: rgba(241, 245, 249, 0.1);
+}
+
+:root[data-theme="dark"] .error-banner {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.36);
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
+:root[data-theme="dark"] .success-banner {
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.34);
+  border-color: rgba(74, 222, 128, 0.32);
+}
+
+:root[data-theme="dark"] .avatar {
+  background: linear-gradient(135deg, #26364a, #164e45);
+  color: #dbeafe;
+}
+
+:root[data-theme="dark"] .avatar-online-dot {
+  border-color: var(--surface);
 }

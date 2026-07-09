@@ -1,4 +1,4 @@
-const asyncHandler = require("../utils/asyncHandler");
+﻿const asyncHandler = require("../utils/asyncHandler");
 const HttpError = require("../utils/httpError");
 const { getAuth } = require("../config/firebase");
 const {
@@ -53,9 +53,9 @@ const sendVerificationEmail = asyncHandler(async (req, res) => {
 
   const result = await sendMail({
     to: req.user.email,
-    subject: "Verify your ShadowChat email",
-    text: `Verify your email: ${link}`,
-    html: `<p>Verify your ShadowChat email by clicking the link below:</p><p><a href="${link}">${link}</a></p>`
+    subject: "Your ShadowChat account was created",
+    text: `Your ShadowChat account has been created. Verify your email: ${link}`,
+    html: `<p>Your ShadowChat account has been created.</p><p>Verify your email by clicking the link below:</p><p><a href="${link}">${link}</a></p>`
   });
 
   res.json({
@@ -93,3 +93,5 @@ module.exports = {
   sendVerificationEmail,
   forgotPassword
 };
+
+

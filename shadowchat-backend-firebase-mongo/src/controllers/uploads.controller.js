@@ -1,8 +1,13 @@
-const path = require("path");
-const asyncHandler = require("../utils/asyncHandler");
+﻿const asyncHandler = require("../utils/asyncHandler");
 const HttpError = require("../utils/httpError");
+const { MESSAGE_NEW } = require("../constants/events");
 const { createMessage } = require("../services/message.service");
 const { toAttachment, detectMessageType } = require("../services/storage.service");
+const { emitToConversationParticipants } = require("../sockets");
+
+function getIo(req) {
+  return req.app.get("io");
+}
 
 const uploadMedia = asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, "No file uploaded");
@@ -24,6 +29,8 @@ const uploadMedia = asyncHandler(async (req, res) => {
     attachments: [attachment],
     replyToId
   });
+
+  await emitToConversationParticipants(getIo(req), conversationId, MESSAGE_NEW, message);
 
   res.status(201).json({
     success: true,
@@ -50,6 +57,8 @@ const uploadVoiceNote = asyncHandler(async (req, res) => {
     attachments: [attachment],
     replyToId
   });
+
+  await emitToConversationParticipants(getIo(req), conversationId, MESSAGE_NEW, message);
 
   res.status(201).json({
     success: true,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { createSocket } from "../lib/socket";
@@ -299,7 +299,14 @@ export default function ChatPage() {
       const normalized = normalizeMessageForUi(message, profile);
       if (!normalized) return;
 
-      setConversations((prev) => updateConversationPreview(prev, normalized));
+      setConversations((prev) => {
+        const hasConversation = prev.some((conversation) => String(conversation._id) === String(normalized.conversation));
+        if (!hasConversation) {
+          queueMicrotask(() => loadConversations());
+          return prev;
+        }
+        return updateConversationPreview(prev, normalized);
+      });
       setMessages((prev) => {
         const currentConversation = activeConversationRef.current;
         if (
@@ -382,7 +389,7 @@ export default function ChatPage() {
     socket.on(SOCKET_EVENTS.CALL_END, () => {
       cleanupCall();
     });
-  }, [cleanupCall, markSeen, profile]);
+  }, [cleanupCall, loadConversations, markSeen, profile]);
 
   useEffect(() => {
     let mounted = true;
@@ -583,7 +590,6 @@ export default function ChatPage() {
         setConversations((prev) => updateConversationPreview(prev, message));
       }
 
-      await loadMessages(conversationId);
 
       setReplyingTo(null);
       setStatusError("");
@@ -616,7 +622,6 @@ export default function ChatPage() {
         setConversations((prev) => updateConversationPreview(prev, message));
       }
 
-      await loadMessages(conversationId);
 
       setReplyingTo(null);
       setStatusError("");
@@ -822,11 +827,11 @@ export default function ChatPage() {
           {statusMessage ? <div className="success-banner floating-banner">{statusMessage}</div> : null}
 
           {loadingConversations ? (
-            <div className="glass-panel loading-zone">Loading conversationsâ€¦</div>
+            <div className="glass-panel loading-zone">Loading conversationsÃ¢â‚¬Â¦</div>
           ) : activeConversation ? (
             <>
               {loadingMessages ? (
-                <div className="glass-panel loading-zone">Loading messagesâ€¦</div>
+                <div className="glass-panel loading-zone">Loading messagesÃ¢â‚¬Â¦</div>
               ) : (
                 <MessageList
                   messages={messages}

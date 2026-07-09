@@ -1,5 +1,6 @@
-import { LogOut, PencilLine, Search, Users, X } from "lucide-react";
+﻿import { LogOut, Moon, PencilLine, Search, Sun, Users, X } from "lucide-react";
 import Avatar from "./Avatar";
+import { useTheme } from "../contexts/ThemeContext";
 import { formatTime, getConversationAvatar, getConversationTitle } from "../utils/chat";
 
 function ConversationItem({ conversation, currentUserId, active, onSelect }) {
@@ -43,6 +44,8 @@ export default function Sidebar({
   mobileOpen = false,
   onCloseMobile
 }) {
+  const { isDark, toggleTheme } = useTheme();
+
   return (
     <aside className={`sidebar glass-panel ${mobileOpen ? "mobile-open" : ""}`}>
       <div className="sidebar-top">
@@ -62,6 +65,9 @@ export default function Sidebar({
           </button>
           <button type="button" className="icon-button" onClick={onOpenGroup} title="Create group">
             <Users size={18} />
+          </button>
+          <button type="button" className="icon-button" onClick={toggleTheme} title={isDark ? "Switch to light mode" : "Switch to dark mode"}>
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button type="button" className="icon-button" onClick={onLogout} title="Sign out">
             <LogOut size={18} />

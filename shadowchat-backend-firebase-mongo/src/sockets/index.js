@@ -1,4 +1,4 @@
-const { Server } = require("socket.io");
+﻿const { Server } = require("socket.io");
 const { getAuth } = require("../config/firebase");
 const env = require("../config/env");
 const { syncUserFromFirebase } = require("../services/auth.service");
@@ -37,6 +37,17 @@ function roomForUser(userId) {
 
 function roomForConversation(conversationId) {
   return `conversation:${conversationId}`;
+}
+
+async function emitToConversationParticipants(io, conversationId, eventName, payload) {
+  if (!io || !conversationId || !eventName) return;
+
+  const participantIds = await getConversationParticipants(conversationId);
+  let target = io.to(roomForConversation(conversationId));
+  participantIds.forEach((participantId) => {
+    target = target.to(roomForUser(participantId));
+  });
+  target.emit(eventName, payload);
 }
 
 async function getUserConversationIds(userId) {
@@ -139,7 +150,7 @@ async function setupSocket(io, socket) {
         meta: payload.meta || {}
       });
 
-      io.to(roomForConversation(payload.conversationId)).emit(MESSAGE_NEW, message);
+      await emitToConversationParticipants(io, payload.conversationId, MESSAGE_NEW, message);
       if (typeof ack === "function") ack({ success: true, data: message });
     } catch (error) {
       if (typeof ack === "function") ack(buildSocketError(error.message));
@@ -153,7 +164,7 @@ async function setupSocket(io, socket) {
         userId: user._id,
         text
       });
-      io.to(roomForConversation(String(message.conversation))).emit(MESSAGE_EDITED, message);
+      await emitToConversationParticipants(io, String(message.conversation), MESSAGE_EDITED, message);
       if (typeof ack === "function") ack({ success: true, data: message });
     } catch (error) {
       if (typeof ack === "function") ack(buildSocketError(error.message));
@@ -166,7 +177,7 @@ async function setupSocket(io, socket) {
         messageId,
         userId: user._id
       });
-      io.to(roomForConversation(String(message.conversation))).emit(MESSAGE_DELETED, message);
+      await emitToConversationParticipants(io, String(message.conversation), MESSAGE_DELETED, message);
       if (typeof ack === "function") ack({ success: true, data: message });
     } catch (error) {
       if (typeof ack === "function") ack(buildSocketError(error.message));
@@ -180,7 +191,7 @@ async function setupSocket(io, socket) {
         userId: user._id,
         emoji
       });
-      io.to(roomForConversation(String(message.conversation))).emit(MESSAGE_REACTION, message);
+      await emitToConversationParticipants(io, String(message.conversation), MESSAGE_REACTION, message);
       if (typeof ack === "function") ack({ success: true, data: message });
     } catch (error) {
       if (typeof ack === "function") ack(buildSocketError(error.message));
@@ -194,7 +205,7 @@ async function setupSocket(io, socket) {
         userId: user._id,
         messageId: messageId || null
       });
-      io.to(roomForConversation(conversationId)).emit(MESSAGE_SEEN, {
+      await emitToConversationParticipants(io, conversationId, MESSAGE_SEEN, {
         conversationId,
         messageId: messageId || null,
         userId: String(user._id),
@@ -365,5 +376,8 @@ function initSocketServer(httpServer) {
 module.exports = {
   initSocketServer,
   roomForUser,
-  roomForConversation
+  roomForConversation,
+  emitToConversationParticipants
 };
+
+

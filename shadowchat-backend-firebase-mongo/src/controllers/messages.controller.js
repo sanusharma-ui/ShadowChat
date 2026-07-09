@@ -1,4 +1,4 @@
-const asyncHandler = require("../utils/asyncHandler");
+﻿const asyncHandler = require("../utils/asyncHandler");
 const HttpError = require("../utils/httpError");
 const {
   createMessage,
@@ -8,6 +8,18 @@ const {
   markConversationSeen,
   searchMessages
 } = require("../services/message.service");
+const {
+  MESSAGE_NEW,
+  MESSAGE_EDITED,
+  MESSAGE_DELETED,
+  MESSAGE_REACTION,
+  MESSAGE_SEEN
+} = require("../constants/events");
+const { emitToConversationParticipants } = require("../sockets");
+
+function getIo(req) {
+  return req.app.get("io");
+}
 
 const sendMessage = asyncHandler(async (req, res) => {
   const payload = req.body || {};
@@ -21,6 +33,8 @@ const sendMessage = asyncHandler(async (req, res) => {
     replyToId: payload.replyToId || null,
     meta: payload.meta || {}
   });
+
+  await emitToConversationParticipants(getIo(req), payload.conversationId, MESSAGE_NEW, message);
 
   res.status(201).json({
     success: true,
@@ -38,6 +52,8 @@ const updateMessage = asyncHandler(async (req, res) => {
     text
   });
 
+  await emitToConversationParticipants(getIo(req), String(message.conversation), MESSAGE_EDITED, message);
+
   res.json({
     success: true,
     data: message
@@ -49,6 +65,8 @@ const removeMessage = asyncHandler(async (req, res) => {
     messageId: req.params.messageId,
     userId: req.user._id
   });
+
+  await emitToConversationParticipants(getIo(req), String(message.conversation), MESSAGE_DELETED, message);
 
   res.json({
     success: true,
@@ -66,6 +84,8 @@ const reactToMessage = asyncHandler(async (req, res) => {
     emoji
   });
 
+  await emitToConversationParticipants(getIo(req), String(message.conversation), MESSAGE_REACTION, message);
+
   res.json({
     success: true,
     data: message
@@ -80,6 +100,13 @@ const markSeen = asyncHandler(async (req, res) => {
     conversationId,
     userId: req.user._id,
     messageId: messageId || null
+  });
+
+  await emitToConversationParticipants(getIo(req), conversationId, MESSAGE_SEEN, {
+    conversationId,
+    messageId: messageId || null,
+    userId: String(req.user._id),
+    modifiedCount: result.modifiedCount
   });
 
   res.json({

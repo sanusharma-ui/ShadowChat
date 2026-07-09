@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
@@ -79,12 +79,26 @@ export function AuthProvider({ children }) {
         await updateProfile(credentials.user, { displayName: name.trim() });
       }
 
+      await credentials.user.getIdToken(true);
       await syncSession();
 
-      await sendEmailVerification(credentials.user, {
-        url: `${window.location.origin}/auth/action`,
-        handleCodeInApp: false
-      });
+      try {
+        const verificationResponse = await api.post("/auth/send-verification-email", {
+          continueUrl: `${window.location.origin}/auth/action`
+        });
+
+        if (verificationResponse.data?.data?.verificationLink) {
+          await sendEmailVerification(credentials.user, {
+            url: `${window.location.origin}/auth/action`,
+            handleCodeInApp: false
+          });
+        }
+      } catch (mailError) {
+        await sendEmailVerification(credentials.user, {
+          url: `${window.location.origin}/auth/action`,
+          handleCodeInApp: false
+        });
+      }
 
       return true;
     } catch (error) {
