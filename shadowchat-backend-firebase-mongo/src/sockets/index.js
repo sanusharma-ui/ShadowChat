@@ -1,4 +1,4 @@
-﻿const { Server } = require("socket.io");
+const { Server } = require("socket.io");
 const { getAuth } = require("../config/firebase");
 const env = require("../config/env");
 const { syncUserFromFirebase } = require("../services/auth.service");
@@ -242,13 +242,14 @@ async function setupSocket(io, socket) {
     }
   });
 
-  socket.on(CALL_OFFER, async ({ conversationId, targetUserId, offer }, ack) => {
+  socket.on(CALL_OFFER, async ({ conversationId, targetUserId, offer, callType = "video" }, ack) => {
     try {
       await ensureParticipant(conversationId, user._id);
       io.to(roomForUser(targetUserId)).emit(CALL_OFFER, {
         conversationId,
         fromUserId: String(user._id),
-        offer
+        offer,
+        callType
       });
       if (typeof ack === "function") ack({ success: true });
     } catch (error) {

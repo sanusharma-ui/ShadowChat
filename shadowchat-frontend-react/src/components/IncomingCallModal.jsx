@@ -1,7 +1,7 @@
 import { PhoneIncoming, PhoneOff, Video } from "lucide-react";
 import Avatar from "./Avatar";
 
-export default function IncomingCallModal({ call, onAccept, onDecline }) {
+export default function IncomingCallModal({ call, onAccept, onDecline, acceptDisabled = false }) {
   if (!call) return null;
 
   return (
@@ -16,9 +16,9 @@ export default function IncomingCallModal({ call, onAccept, onDecline }) {
             <PhoneOff size={18} />
             Decline
           </button>
-          <button type="button" className="primary-button" onClick={onAccept}>
+          <button type="button" className="primary-button" onClick={onAccept} disabled={acceptDisabled}>
             {call.callType === "video" ? <Video size={18} /> : <PhoneIncoming size={18} />}
-            Accept
+            {acceptDisabled ? "Connecting" : "Accept"}
           </button>
         </div>
       </div>

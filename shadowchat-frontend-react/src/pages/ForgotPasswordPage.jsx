@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Reset your password"
-      subtitle="Enter your email and we’ll send you a reset link through Firebase." 
+      subtitle="Enter your email and we will send a reset link through Firebase." 
       footer={
         <p>
           Remembered it? <Link to="/login">Back to login</Link>
@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
         {state.success ? <div className="success-banner">{state.success}</div> : null}
 
         <button className="primary-button" type="submit" disabled={state.busy}>
-          {state.busy ? "Sending reset link…" : "Send reset link"}
+          {state.busy ? "Sending reset link..." : "Send reset link"}
         </button>
       </form>
     </AuthShell>

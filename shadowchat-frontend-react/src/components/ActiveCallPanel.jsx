@@ -1,42 +1,71 @@
+import { useEffect } from "react";
 import { MicOff, PhoneOff, VideoOff } from "lucide-react";
 
 export default function ActiveCallPanel({
   activeCall,
   localVideoRef,
   remoteVideoRef,
+  localStream,
+  remoteStream,
   onEndCall,
   onToggleMute,
   onToggleVideo
 }) {
+  useEffect(() => {
+    if (localVideoRef?.current) {
+      localVideoRef.current.srcObject = localStream || null;
+    }
+  }, [localStream, localVideoRef]);
+
+  useEffect(() => {
+    if (remoteVideoRef?.current) {
+      remoteVideoRef.current.srcObject = remoteStream || null;
+    }
+  }, [remoteStream, remoteVideoRef]);
+
   if (!activeCall) return null;
+
+  const isAudioOnly = activeCall.type === "audio";
 
   return (
     <div className="call-panel glass-card">
-      <div className="call-videos">
-        <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
+      <div className={`call-videos ${isAudioOnly ? "audio-only" : ""}`}>
+        {isAudioOnly ? (
+          <div className="audio-call-stage">
+            <div className="audio-pulse" />
+            <strong>{activeCall.label}</strong>
+            <span>{activeCall.status || "Voice call connected"}</span>
+          </div>
+        ) : null}
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={`remote-video ${isAudioOnly ? "hidden" : ""}`}
+        />
         <video
           ref={localVideoRef}
           autoPlay
           playsInline
           muted
-          className={`local-video ${activeCall.type === "audio" ? "hidden" : ""}`}
+          className={`local-video ${isAudioOnly ? "hidden" : ""}`}
         />
       </div>
       <div className="call-footer">
         <div>
           <strong>{activeCall.label}</strong>
-          <p>{activeCall.type === "video" ? "Secure video call" : "Secure voice call"}</p>
+          <p>{activeCall.status || (activeCall.type === "video" ? "Secure video call" : "Secure voice call")}</p>
         </div>
         <div className="call-actions compact">
-          <button type="button" className="icon-button soft" onClick={onToggleMute}>
+          <button type="button" className="icon-button soft" onClick={onToggleMute} title="Mute">
             <MicOff size={18} />
           </button>
           {activeCall.type === "video" ? (
-            <button type="button" className="icon-button soft" onClick={onToggleVideo}>
+            <button type="button" className="icon-button soft" onClick={onToggleVideo} title="Camera">
               <VideoOff size={18} />
             </button>
           ) : null}
-          <button type="button" className="icon-button danger solid" onClick={onEndCall}>
+          <button type="button" className="icon-button danger solid" onClick={onEndCall} title="End call">
             <PhoneOff size={18} />
           </button>
         </div>

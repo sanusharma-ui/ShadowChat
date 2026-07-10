@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { createSocket } from "../lib/socket";
@@ -150,6 +150,9 @@ export default function ChatPage() {
   const [typingByConversation, setTypingByConversation] = useState({});
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [localMediaStream, setLocalMediaStream] = useState(null);
+  const [remoteMediaStream, setRemoteMediaStream] = useState(null);
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const socketRef = useRef(null);
   const peerRef = useRef(null);
@@ -158,6 +161,7 @@ export default function ChatPage() {
   const remoteVideoRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const pendingCallerRef = useRef(null);
+  const pendingIceCandidatesRef = useRef([]);
   const activeConversationRef = useRef(null);
 
   useEffect(() => {
@@ -268,13 +272,48 @@ export default function ChatPage() {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
+    setLocalMediaStream(null);
+    setRemoteMediaStream(null);
     setActiveCall(null);
     setIncomingCall(null);
     pendingOfferRef.current = null;
     pendingCallerRef.current = null;
+    pendingIceCandidatesRef.current = [];
   }, []);
 
+  async function flushPendingIceCandidates(peer) {
+    if (!peer || !pendingIceCandidatesRef.current.length) return;
+
+    const candidates = pendingIceCandidatesRef.current;
+    pendingIceCandidatesRef.current = [];
+
+    for (const candidate of candidates) {
+      try {
+        await peer.addIceCandidate(candidate);
+      } catch (error) {
+        console.error("Queued ICE candidate add failed:", error);
+      }
+    }
+  }
   const attachSocketListeners = useCallback((socket) => {
+    const refreshAfterConnect = () => {
+      loadConversations();
+      const currentConversation = activeConversationRef.current;
+      if (currentConversation?._id) {
+        socket.emit("conversation:join", { conversationId: currentConversation._id });
+        loadMessages(currentConversation._id).then(() => markSeen(currentConversation._id));
+      }
+    };
+
+    socket.on("connect", () => {
+      setSocketConnected(true);
+      refreshAfterConnect();
+    });
+    socket.on("disconnect", () => setSocketConnected(false));
+    if (socket.connected) queueMicrotask(() => {
+      setSocketConnected(true);
+      refreshAfterConnect();
+    });
     socket.on(SOCKET_EVENTS.PRESENCE_UPDATE, ({ userId, isOnline, lastSeenAt }) => {
       setConversations((prev) =>
         prev.map((conversation) => ({
@@ -363,22 +402,42 @@ export default function ChatPage() {
     });
 
     socket.on(SOCKET_EVENTS.CALL_RING, (payload) => {
-      setIncomingCall(payload);
+      setIncomingCall({ ...payload, offerReady: Boolean(pendingOfferRef.current) });
       pendingCallerRef.current = payload.from?._id;
     });
 
-    socket.on(SOCKET_EVENTS.CALL_OFFER, async ({ conversationId, fromUserId, offer }) => {
+    socket.on(SOCKET_EVENTS.CALL_OFFER, async ({ conversationId, fromUserId, offer, callType = "video" }) => {
       pendingOfferRef.current = { conversationId, fromUserId, offer };
       pendingCallerRef.current = fromUserId;
+      setIncomingCall((prev) => {
+        if (prev && String(prev.conversationId) === String(conversationId)) {
+          return { ...prev, callType: prev.callType || callType, offerReady: true };
+        }
+        return {
+          conversationId,
+          callType,
+          offerReady: true,
+          from: {
+            _id: fromUserId,
+            displayName: "Incoming call",
+            username: "caller"
+          }
+        };
+      });
     });
 
     socket.on(SOCKET_EVENTS.CALL_ANSWER, async ({ answer }) => {
       if (!peerRef.current) return;
       await peerRef.current.setRemoteDescription(answer);
+      await flushPendingIceCandidates(peerRef.current);
     });
 
     socket.on(SOCKET_EVENTS.CALL_ICE, async ({ candidate }) => {
-      if (!peerRef.current || !candidate) return;
+      if (!candidate) return;
+      if (!peerRef.current || !peerRef.current.remoteDescription) {
+        pendingIceCandidatesRef.current.push(candidate);
+        return;
+      }
       try {
         await peerRef.current.addIceCandidate(candidate);
       } catch (error) {
@@ -389,7 +448,7 @@ export default function ChatPage() {
     socket.on(SOCKET_EVENTS.CALL_END, () => {
       cleanupCall();
     });
-  }, [cleanupCall, loadConversations, markSeen, profile]);
+  }, [cleanupCall, loadConversations, loadMessages, markSeen, profile]);
 
   useEffect(() => {
     let mounted = true;
@@ -421,6 +480,17 @@ export default function ChatPage() {
       socketRef.current.emit("conversation:join", { conversationId: activeConversation._id });
     }
   }, [activeConversation?._id]);
+  useEffect(() => {
+    if (!activeConversation?._id || socketConnected) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadMessages(activeConversation._id);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeConversation?._id, loadMessages, socketConnected]);
 
   const selectConversation = useCallback((conversation) => {
     setActiveConversation((prev) => {
@@ -648,8 +718,22 @@ export default function ChatPage() {
     });
 
     peer.ontrack = (event) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
+      const [remoteStream] = event.streams;
+      if (remoteStream) {
+        setRemoteMediaStream(remoteStream);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+      }
+    };
+
+    peer.onconnectionstatechange = () => {
+      const state = peer.connectionState;
+      if (state === "connected") {
+        setActiveCall((prev) => (prev ? { ...prev, status: "Connected" } : prev));
+      }
+      if (["failed", "disconnected", "closed"].includes(state)) {
+        setActiveCall((prev) => (prev ? { ...prev, status: "Reconnecting" } : prev));
       }
     };
 
@@ -673,6 +757,7 @@ export default function ChatPage() {
     });
 
     localStreamRef.current = stream;
+    setLocalMediaStream(stream);
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
@@ -702,14 +787,16 @@ export default function ChatPage() {
       socketRef.current?.emit("call:offer", {
         conversationId: activeConversation._id,
         targetUserId: otherUser._id,
-        offer
+        offer,
+        callType: type
       });
 
       setActiveCall({
         type,
         conversationId: activeConversation._id,
         targetUserId: otherUser._id,
-        label: otherUser.displayName || otherUser.username || "Call"
+        label: otherUser.displayName || otherUser.username || "Call",
+        status: "Ringing"
       });
     } catch (error) {
       setStatusError(`Call failed: ${normalizeError(error)}`);
@@ -721,13 +808,18 @@ export default function ChatPage() {
     try {
       const incoming = incomingCall;
       const pending = pendingOfferRef.current;
-      if (!incoming || !pending) return;
+      if (!incoming) return;
+      if (!pending) {
+        setStatusError("Call is still connecting. Please try again in a moment.");
+        return;
+      }
 
       const stream = await attachLocalStream(incoming.callType || "video");
       const peer = buildPeer(pending.fromUserId, pending.conversationId);
 
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       await peer.setRemoteDescription(pending.offer);
+      await flushPendingIceCandidates(peer);
 
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
@@ -742,7 +834,8 @@ export default function ChatPage() {
         type: incoming.callType || "video",
         conversationId: pending.conversationId,
         targetUserId: pending.fromUserId,
-        label: incoming.from?.displayName || incoming.from?.username || "Call"
+        label: incoming.from?.displayName || incoming.from?.username || "Call",
+        status: "Connected"
       });
 
       setIncomingCall(null);
@@ -827,11 +920,11 @@ export default function ChatPage() {
           {statusMessage ? <div className="success-banner floating-banner">{statusMessage}</div> : null}
 
           {loadingConversations ? (
-            <div className="glass-panel loading-zone">Loading conversationsÃ¢â‚¬Â¦</div>
+            <div className="glass-panel loading-zone">Loading conversations...</div>
           ) : activeConversation ? (
             <>
               {loadingMessages ? (
-                <div className="glass-panel loading-zone">Loading messagesÃ¢â‚¬Â¦</div>
+                <div className="glass-panel loading-zone">Loading messages...</div>
               ) : (
                 <MessageList
                   messages={messages}
@@ -906,12 +999,15 @@ export default function ChatPage() {
         call={incomingCall}
         onAccept={acceptIncomingCall}
         onDecline={declineIncomingCall}
+        acceptDisabled={!incomingCall?.offerReady}
       />
 
       <ActiveCallPanel
         activeCall={activeCall}
         localVideoRef={localVideoRef}
         remoteVideoRef={remoteVideoRef}
+        localStream={localMediaStream}
+        remoteStream={remoteMediaStream}
         onEndCall={endCurrentCall}
         onToggleMute={toggleMute}
         onToggleVideo={toggleVideo}

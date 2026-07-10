@@ -1,4 +1,4 @@
-﻿const asyncHandler = require("../utils/asyncHandler");
+const asyncHandler = require("../utils/asyncHandler");
 const HttpError = require("../utils/httpError");
 const { getAuth } = require("../config/firebase");
 const {
@@ -82,7 +82,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: result.sent ? "Password reset email sent" : "Password reset link generated",
-    data: result.sent ? { transport: result.transport } : { resetLink: link }
+    data: result.sent
+      ? { mailSent: true, transport: result.transport }
+      : { mailSent: false, transport: result.transport, resetLink: link }
   });
 });
 

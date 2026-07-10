@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Paperclip, Send, Square, X } from "lucide-react";
 
-const emojiBar = ["❤️", "🔥", "😂", "👍", "😮", "🎉"];
+const emojiBar = ["\u2764\uFE0F", "\uD83D\uDD25", "\uD83D\uDE02", "\uD83D\uDC4D", "\uD83D\uDE2E", "\uD83C\uDF89"];
 
 export default function MessageComposer({
   disabled,

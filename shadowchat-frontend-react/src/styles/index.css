@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #f4f6fb;
   --surface: #ffffff;
   --surface-soft: #f8fafc;
@@ -389,8 +389,8 @@ small {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px 12px 8px;
-  background: #edf2f7;
+  padding: 14px 14px 8px;
+  background: #e7edf4;
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -413,8 +413,8 @@ small {
 .message-row {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 5px;
 }
 
 .message-row.mine {
@@ -428,12 +428,12 @@ small {
 }
 
 .message-bubble {
-  max-width: min(68%, 680px);
+  max-width: min(62%, 560px);
   position: relative;
   background: var(--theirs);
   border: 1px solid var(--border);
-  border-radius: 8px 8px 8px 2px;
-  padding: 8px 10px 7px;
+  border-radius: 8px 8px 8px 3px;
+  padding: 6px 9px 5px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -441,7 +441,7 @@ small {
   background: var(--mine);
   color: #ffffff;
   border-color: var(--mine);
-  border-radius: 8px 8px 2px 8px;
+  border-radius: 8px 8px 3px 8px;
 }
 
 .message-bubble.deleted {
@@ -460,8 +460,8 @@ small {
 }
 
 .message-text {
-  margin: 6px 0 0;
-  line-height: 1.45;
+  margin: 3px 0 0;
+  line-height: 1.38;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
@@ -480,9 +480,9 @@ small {
   justify-content: flex-end;
   align-items: center;
   gap: 5px;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--muted-2);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
 }
 
 .edited-chip {
@@ -536,7 +536,7 @@ small {
 .message-image,
 .message-video {
   width: 100%;
-  max-width: 320px;
+  max-width: 280px;
   border-radius: var(--radius-sm);
   margin-top: 3px;
   border: 1px solid rgba(15, 23, 42, 0.12);
@@ -597,7 +597,7 @@ small {
 
 .composer-shell {
   flex-shrink: 0;
-  padding: 10px;
+  padding: 8px;
 }
 
 .composer-banner {
@@ -651,9 +651,9 @@ small {
 }
 
 .composer-form textarea {
-  min-height: 44px;
-  max-height: 128px;
-  padding: 11px 12px;
+  min-height: 40px;
+  max-height: 116px;
+  padding: 9px 11px;
   border-radius: var(--radius);
   line-height: 1.35;
 }
@@ -671,8 +671,8 @@ small {
 }
 
 .icon-button {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   color: var(--muted);
   background: var(--surface-soft);
@@ -719,8 +719,8 @@ small {
 }
 
 .primary-icon-button {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
 }
 
 .primary-button,
@@ -926,7 +926,7 @@ small {
   background: var(--surface-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 8px;
 }
 
 .search-user-row > div,
@@ -1089,6 +1089,33 @@ small {
 .local-video.hidden {
   display: none;
 }
+.call-videos.audio-only {
+  display: grid;
+  place-items: center;
+}
+
+.audio-call-stage {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.audio-call-stage span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.86rem;
+}
+
+.audio-pulse {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary) 0 42%, rgba(96, 165, 250, 0.24) 43% 100%);
+  box-shadow: 0 0 0 10px rgba(96, 165, 250, 0.12);
+}
 
 .call-footer {
   display: flex;
@@ -1196,8 +1223,8 @@ small {
 }
 
 .loader-ring {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 3px solid #dbe4f0;
   border-top-color: var(--primary);
@@ -1313,7 +1340,7 @@ small {
   }
 
   .message-bubble {
-    max-width: 84%;
+    max-width: 80%;
   }
 
   .message-tools {
@@ -1335,7 +1362,7 @@ small {
 
   .composer-form textarea {
     min-height: 42px;
-    padding: 10px;
+    padding: 8px;
   }
 
   .icon-button {
@@ -1393,7 +1420,7 @@ small {
   .avatar-lg { width: 44px; height: 44px; }
 
   .message-bubble {
-    max-width: 88%;
+    max-width: 84%;
     padding: 8px;
   }
 
@@ -1433,7 +1460,7 @@ small {
   }
 
   .auth-page-shell {
-    padding: 10px;
+    padding: 8px;
   }
 }
 :root[data-theme="dark"] .profile-row:hover,

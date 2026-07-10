@@ -1,4 +1,4 @@
-import { CheckCheck, CornerUpLeft, FileText, Pencil, Play, SmilePlus, Trash2 } from "lucide-react";
+import { CheckCheck, CornerUpLeft, FileText, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import Avatar from "./Avatar";
 import { formatTime } from "../utils/chat";
 
@@ -95,7 +95,7 @@ export default function MessageBubble({
                 </button>
               </>
             ) : null}
-            <button type="button" className="icon-button soft small" title="React" onClick={() => onReact("❤️")}>
+            <button type="button" className="icon-button soft small" title="React" onClick={() => onReact("\u2764\uFE0F")}>
               <SmilePlus size={14} />
             </button>
           </div>

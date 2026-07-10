@@ -1,4 +1,4 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
@@ -176,14 +176,26 @@ export function AuthProvider({ children }) {
   }, []);
 
   const requestPasswordReset = useCallback(async (email) => {
+    const cleanEmail = String(email || "").trim();
+    if (!cleanEmail) throw new Error("Email is required");
+
     try {
-      await api.post("/auth/forgot-password", {
-        email,
+      const response = await api.post("/auth/forgot-password", {
+        email: cleanEmail,
         continueUrl: `${window.location.origin}/auth/action`
       });
+
+      const resetData = response.data?.data || {};
+      if (resetData.mailSent === false || resetData.resetLink) {
+        await sendPasswordResetEmail(auth, cleanEmail, {
+          url: `${window.location.origin}/login`,
+          handleCodeInApp: false
+        });
+      }
+
       return true;
     } catch (error) {
-      await sendPasswordResetEmail(auth, email, {
+      await sendPasswordResetEmail(auth, cleanEmail, {
         url: `${window.location.origin}/login`,
         handleCodeInApp: false
       });
