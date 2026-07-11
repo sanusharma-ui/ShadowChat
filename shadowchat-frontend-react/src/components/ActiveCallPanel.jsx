@@ -5,6 +5,7 @@ export default function ActiveCallPanel({
   activeCall,
   localVideoRef,
   remoteVideoRef,
+  remoteAudioRef,
   localStream,
   remoteStream,
   onEndCall,
@@ -22,6 +23,12 @@ export default function ActiveCallPanel({
       remoteVideoRef.current.srcObject = remoteStream || null;
     }
   }, [remoteStream, remoteVideoRef]);
+
+  useEffect(() => {
+    if (remoteAudioRef?.current) {
+      remoteAudioRef.current.srcObject = remoteStream || null;
+    }
+  }, [remoteAudioRef, remoteStream]);
 
   if (!activeCall) return null;
 
@@ -43,6 +50,7 @@ export default function ActiveCallPanel({
           playsInline
           className={`remote-video ${isAudioOnly ? "hidden" : ""}`}
         />
+        <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: "none" }} />
         <video
           ref={localVideoRef}
           autoPlay

@@ -159,6 +159,7 @@ export default function ChatPage() {
   const localStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const pendingCallerRef = useRef(null);
   const pendingIceCandidatesRef = useRef([]);
@@ -271,6 +272,7 @@ export default function ChatPage() {
 
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
 
     setLocalMediaStream(null);
     setRemoteMediaStream(null);
@@ -718,13 +720,24 @@ export default function ChatPage() {
     });
 
     peer.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteStream) {
-        setRemoteMediaStream(remoteStream);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
+      const streamWithTracks =
+        event.streams?.find((stream) => stream.getTracks().length > 0) || null;
+
+      if (streamWithTracks) {
+        setRemoteMediaStream(streamWithTracks);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = streamWithTracks;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = streamWithTracks;
+        return;
       }
+
+      if (!event.track) return;
+      setRemoteMediaStream((prev) => {
+        const existingTracks = prev ? prev.getTracks().filter((track) => track.id !== event.track.id) : [];
+        const nextStream = new MediaStream([...existingTracks, event.track]);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = nextStream;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = nextStream;
+        return nextStream;
+      });
     };
 
     peer.onconnectionstatechange = () => {
@@ -1006,6 +1019,7 @@ export default function ChatPage() {
         activeCall={activeCall}
         localVideoRef={localVideoRef}
         remoteVideoRef={remoteVideoRef}
+        remoteAudioRef={remoteAudioRef}
         localStream={localMediaStream}
         remoteStream={remoteMediaStream}
         onEndCall={endCurrentCall}
