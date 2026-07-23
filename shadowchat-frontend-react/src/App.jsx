@@ -12,7 +12,7 @@ function LoaderScreen() {
       <div className="glass-card loading-card">
         <div className="loader-ring" />
         <h2>Loading ShadowChat</h2>
-        <p>Syncing your secure session and conversations…</p>
+        <p>Syncing your secure session and conversations...</p>
       </div>
     </div>
   );

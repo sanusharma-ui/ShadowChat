@@ -62,7 +62,7 @@ export default function LoginPage() {
             <Lock size={18} />
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder="Password"
               value={form.password}
               onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
               required
@@ -73,7 +73,7 @@ export default function LoginPage() {
         {error ? <div className="error-banner">{error}</div> : null}
 
         <button className="primary-button" type="submit" disabled={authBusy}>
-          {authBusy ? "Signing in…" : "Sign in"}
+          {authBusy ? "Signing in..." : "Sign in"}
         </button>
 
         <button className="secondary-button" type="button" onClick={handleGoogle} disabled={authBusy}>

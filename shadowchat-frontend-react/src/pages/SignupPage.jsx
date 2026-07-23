@@ -113,7 +113,7 @@ export default function SignupPage() {
         {error ? <div className="error-banner">{error}</div> : null}
 
         <button className="primary-button" type="submit" disabled={authBusy}>
-          {authBusy ? "Creating account…" : "Create account"}
+          {authBusy ? "Creating account..." : "Create account"}
         </button>
 
         <button className="secondary-button" type="button" onClick={handleGoogle} disabled={authBusy}>

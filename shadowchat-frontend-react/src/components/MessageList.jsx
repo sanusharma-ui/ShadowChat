@@ -52,7 +52,7 @@ export default function MessageList({
 
       {typingUsers.length ? (
         <div className="typing-pill">
-          <span>{typingUsers.map((user) => user.displayName || user.username || "Someone").join(", ")} typing…</span>
+          <span>{typingUsers.map((user) => user.displayName || user.username || "Someone").join(", ")} typing...</span>
         </div>
       ) : null}
       <div ref={bottomRef} />
