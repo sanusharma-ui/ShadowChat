@@ -4,8 +4,16 @@ import { formatTime } from "../utils/chat";
 
 function AttachmentPreview({ attachment, messageType }) {
   if (!attachment) return null;
+
   if (messageType === "image") {
-    return <img className="message-image" src={attachment.url} alt={attachment.fileName || "attachment"} />;
+    return (
+      <img
+        className="message-image"
+        src={attachment.url}
+        alt={attachment.fileName || "attachment"}
+        loading="lazy"
+      />
+    );
   }
   if (messageType === "video") {
     return <video className="message-video" src={attachment.url} controls preload="metadata" />;
@@ -16,7 +24,7 @@ function AttachmentPreview({ attachment, messageType }) {
 
   return (
     <a className="file-chip" href={attachment.url} target="_blank" rel="noreferrer">
-      <FileText size={16} />
+      <FileText size={15} />
       <span>{attachment.fileName || "File"}</span>
     </a>
   );
@@ -27,7 +35,12 @@ function ReactionStrip({ reactions = [], onReact }) {
   return (
     <div className="reaction-strip">
       {reactions.map((reaction) => (
-        <button key={reaction.emoji} type="button" className="reaction-pill" onClick={() => onReact(reaction.emoji)}>
+        <button
+          key={reaction.emoji}
+          type="button"
+          className="reaction-pill"
+          onClick={() => onReact(reaction.emoji)}
+        >
           <span>{reaction.emoji}</span>
           <small>{reaction.users?.length || 0}</small>
         </button>
@@ -44,23 +57,33 @@ export default function MessageBubble({
   onDelete,
   onStartReply,
   onStartEdit,
-  onReact
+  onReact,
 }) {
   const attachment = message.attachments?.[0];
   const deleted = message.deletedForEveryone;
 
   return (
     <div className={`message-row ${isMine ? "mine" : ""}`}>
+      {/* Avatar / spacer on the left for others' messages */}
       {!isMine ? (
-        showAvatar ? <Avatar name={senderName} src={message.sender?.avatarUrl} size="sm" /> : <div className="avatar-spacer" />
+        showAvatar ? (
+          <Avatar name={senderName} src={message.sender?.avatarUrl} size="sm" />
+        ) : (
+          <div className="avatar-spacer" />
+        )
       ) : null}
 
+      {/* Bubble */}
       <div className={`message-bubble ${isMine ? "mine" : ""} ${deleted ? "deleted" : ""}`}>
-        {!isMine && showAvatar ? <strong className="message-author">{senderName}</strong> : null}
+        {/* Author name in group chats */}
+        {!isMine && showAvatar ? (
+          <strong className="message-author">{senderName}</strong>
+        ) : null}
 
+        {/* Reply preview */}
         {message.replyTo ? (
           <div className="reply-chip">
-            <CornerUpLeft size={14} />
+            <CornerUpLeft size={13} />
             <div>
               <strong>{message.replyTo?.sender?.displayName || "Reply"}</strong>
               <span>{message.replyTo?.text || `[${message.replyTo?.type || "message"}]`}</span>
@@ -68,35 +91,65 @@ export default function MessageBubble({
           </div>
         ) : null}
 
-        {attachment ? <AttachmentPreview attachment={attachment} messageType={message.type} /> : null}
-        {message.text ? <p className="message-text">{message.text}</p> : null}
-        {!message.text && deleted ? <p className="message-text muted-italic">This message was deleted.</p> : null}
+        {/* Attachment */}
+        {attachment ? (
+          <AttachmentPreview attachment={attachment} messageType={message.type} />
+        ) : null}
 
+        {/* Text */}
+        {message.text ? <p className="message-text">{message.text}</p> : null}
+        {!message.text && deleted ? (
+          <p className="message-text muted-italic">This message was deleted.</p>
+        ) : null}
+
+        {/* Reactions */}
         <ReactionStrip reactions={message.reactions} onReact={onReact} />
 
+        {/* Meta: time + edited + read tick */}
         <div className="message-meta">
           <span>{formatTime(message.createdAt)}</span>
           {message.editedAt ? <span className="edited-chip">edited</span> : null}
-          {isMine ? <CheckCheck size={14} /> : null}
+          {isMine ? <CheckCheck size={13} /> : null}
         </div>
 
+        {/* Hover action toolbar */}
         {!deleted ? (
           <div className="message-tools">
-            <button type="button" className="icon-button soft small" title="Reply" onClick={onStartReply}>
-              <CornerUpLeft size={14} />
+            <button
+              type="button"
+              className="icon-button soft small"
+              title="Reply"
+              onClick={onStartReply}
+            >
+              <CornerUpLeft size={13} />
             </button>
             {isMine ? (
               <>
-                <button type="button" className="icon-button soft small" title="Edit" onClick={onStartEdit}>
-                  <Pencil size={14} />
+                <button
+                  type="button"
+                  className="icon-button soft small"
+                  title="Edit"
+                  onClick={onStartEdit}
+                >
+                  <Pencil size={13} />
                 </button>
-                <button type="button" className="icon-button soft small danger" title="Delete" onClick={onDelete}>
-                  <Trash2 size={14} />
+                <button
+                  type="button"
+                  className="icon-button soft small danger"
+                  title="Delete"
+                  onClick={onDelete}
+                >
+                  <Trash2 size={13} />
                 </button>
               </>
             ) : null}
-            <button type="button" className="icon-button soft small" title="React" onClick={() => onReact("\u2764\uFE0F")}>
-              <SmilePlus size={14} />
+            <button
+              type="button"
+              className="icon-button soft small"
+              title="React"
+              onClick={() => onReact("❤️")}
+            >
+              <SmilePlus size={13} />
             </button>
           </div>
         ) : null}

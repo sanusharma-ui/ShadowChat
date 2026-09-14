@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
     setState({ error: "", success: "", busy: true });
     try {
       await requestPasswordReset(email);
-      setState({ error: "", success: "Password reset link sent. Check your inbox.", busy: false });
+      setState({ error: "", success: "Reset link sent! Check your inbox.", busy: false });
     } catch (error) {
       setState({ error: error.message, success: "", busy: false });
     }
@@ -23,18 +23,18 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Reset your password"
-      subtitle="Enter your email and we will send a reset link through Firebase." 
+      subtitle="We'll send a secure reset link to your inbox."
       footer={
         <p>
-          Remembered it? <Link to="/login">Back to login</Link>
+          Remembered it? <Link to="/login">Back to sign in</Link>
         </p>
       }
     >
       <form className="auth-form" onSubmit={handleSubmit}>
         <label className="input-wrap">
-          <span>Email</span>
+          <span>Email address</span>
           <div className="input-with-icon">
-            <Mail size={18} />
+            <Mail size={17} />
             <input
               type="email"
               placeholder="you@example.com"
@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
         {state.success ? <div className="success-banner">{state.success}</div> : null}
 
         <button className="primary-button" type="submit" disabled={state.busy}>
-          {state.busy ? "Sending reset link..." : "Send reset link"}
+          {state.busy ? "Sending…" : "Send reset link"}
         </button>
       </form>
     </AuthShell>

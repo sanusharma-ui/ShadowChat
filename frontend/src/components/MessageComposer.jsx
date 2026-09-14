@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Paperclip, Send, Square, X } from "lucide-react";
 
-const emojiBar = ["\u2764\uFE0F", "\uD83D\uDD25", "\uD83D\uDE02", "\uD83D\uDC4D", "\uD83D\uDE2E", "\uD83C\uDF89"];
+const emojiBar = ["❤️", "🔥", "😂", "👍", "😮", "🎉", "👏", "🥹"];
 
 export default function MessageComposer({
   disabled,
@@ -13,7 +13,7 @@ export default function MessageComposer({
   onUploadMedia,
   onUploadVoice,
   onTypingStart,
-  onTypingStop
+  onTypingStop,
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,9 +25,7 @@ export default function MessageComposer({
   const typingTimerRef = useRef(null);
 
   useEffect(() => {
-    if (editingMessage) {
-      setText(editingMessage.text || "");
-    }
+    if (editingMessage) setText(editingMessage.text || "");
   }, [editingMessage]);
 
   useEffect(() => {
@@ -90,7 +88,7 @@ export default function MessageComposer({
         stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         const file = new File([blob], `voice-note-${Date.now()}.webm`, {
-          type: blob.type || "audio/webm"
+          type: blob.type || "audio/webm",
         });
         setBusy(true);
         try {
@@ -104,7 +102,7 @@ export default function MessageComposer({
       recorder.start();
       mediaRecorderRef.current = recorder;
       setRecording(true);
-    } catch (err) {
+    } catch {
       setError("Microphone access denied or unavailable.");
     }
   }
@@ -114,42 +112,60 @@ export default function MessageComposer({
     setRecording(false);
   }
 
-  const bannerText = editingMessage
-    ? `Editing message: ${editingMessage.text}`
-    : replyingTo
-      ? `Replying to ${replyingTo.sender?.displayName || replyingTo.sender?.username || "message"}`
-      : "";
+  const bannerLabel = editingMessage ? "Edit message" : "Reply";
+  const bannerSub = editingMessage
+    ? editingMessage.text
+    : `To ${replyingTo?.sender?.displayName || replyingTo?.sender?.username || "message"}`;
+
+  const canSend = !disabled && !busy && text.trim().length > 0;
 
   return (
     <div className="composer-shell glass-panel">
+      {/* ── Reply / Edit banner ── */}
       {(replyingTo || editingMessage) ? (
         <div className="composer-banner">
-          <div>
-            <strong>{editingMessage ? "Edit message" : "Reply"}</strong>
-            <p>{bannerText}</p>
+          <div style={{ minWidth: 0 }}>
+            <strong style={{ fontSize: "0.84rem" }}>{bannerLabel}</strong>
+            <p>{bannerSub}</p>
           </div>
           <button
             type="button"
             className="icon-button soft"
             onClick={editingMessage ? onCancelEdit : onCancelReply}
+            style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0 }}
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
       ) : null}
 
+      {/* ── Error ── */}
       {error ? <div className="error-banner composer-error">{error}</div> : null}
 
+      {/* ── Quick Emoji Bar ── */}
       <div className="emoji-row">
         {emojiBar.map((emoji) => (
-          <button key={emoji} className="emoji-button" type="button" onClick={() => setText((prev) => `${prev}${emoji}`)}>
+          <button
+            key={emoji}
+            className="emoji-button"
+            type="button"
+            onClick={() => setText((prev) => `${prev}${emoji}`)}
+          >
             {emoji}
           </button>
         ))}
       </div>
 
+      {/* ── Composer form ── */}
       <form className="composer-form" onSubmit={handleSubmit}>
-        <button type="button" className="icon-button soft" onClick={() => fileInputRef.current?.click()} disabled={disabled || busy}>
+        {/* Attach file */}
+        <button
+          type="button"
+          className="icon-button soft"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || busy}
+          title="Attach file"
+        >
           <Paperclip size={18} />
         </button>
         <input
@@ -160,29 +176,61 @@ export default function MessageComposer({
           onChange={handleFileChange}
         />
 
-        <textarea
-          placeholder={disabled ? "Choose a chat to start messaging" : "Type a message"}
-          value={text}
-          disabled={disabled || busy}
-          onChange={(e) => {
-            setText(e.target.value);
-            emitTyping();
-          }}
-          onBlur={() => onTypingStop?.()}
-          rows={1}
-        />
+        {/* Text area */}
+        {recording ? (
+          <div className="recording-indicator">
+            <div className="record-dot" />
+            Recording…
+          </div>
+        ) : (
+          <textarea
+            placeholder={disabled ? "Choose a chat to start messaging" : "Type a message…"}
+            value={text}
+            disabled={disabled || busy}
+            onChange={(e) => {
+              setText(e.target.value);
+              emitTyping();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            onBlur={() => onTypingStop?.()}
+            rows={1}
+          />
+        )}
 
+        {/* Mic / Stop */}
         {!recording ? (
-          <button type="button" className="icon-button soft" onClick={startRecording} disabled={disabled || busy}>
+          <button
+            type="button"
+            className="icon-button soft"
+            onClick={startRecording}
+            disabled={disabled || busy}
+            title="Voice note"
+          >
             <Mic size={18} />
           </button>
         ) : (
-          <button type="button" className="icon-button soft danger" onClick={stopRecording}>
+          <button
+            type="button"
+            className="icon-button danger"
+            onClick={stopRecording}
+            title="Stop recording"
+          >
             <Square size={18} />
           </button>
         )}
 
-        <button className="primary-icon-button" type="submit" disabled={disabled || busy || !text.trim()}>
+        {/* Send */}
+        <button
+          className="primary-icon-button"
+          type="submit"
+          disabled={!canSend}
+          title="Send"
+        >
           <Send size={18} />
         </button>
       </form>

@@ -913,13 +913,6 @@ export default function ChatPage() {
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={() => setMobileSidebarOpen(false)}
         />
-        <button
-          type="button"
-          className={`sidebar-scrim ${mobileSidebarOpen ? "show" : ""}`}
-          aria-label="Close chats"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-
         <main className="chat-main">
           <ChatHeader
             conversation={activeConversation}
