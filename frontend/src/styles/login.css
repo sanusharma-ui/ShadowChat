@@ -6,6 +6,7 @@
 
 /* ── Page shell ── */
 .lp-root {
+  height: 100dvh;
   min-height: 100dvh;
   display: flex;
   align-items: stretch;
@@ -13,7 +14,11 @@
   color: #e8eaf8;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   position: relative;
 }
 
@@ -821,7 +826,11 @@
 
 /* Tablet portrait: single column, minimize visual */
 @media (max-width: 768px) {
-  .lp-root { overflow: auto; }
+  .lp-root {
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 
   .lp-layout {
     grid-template-columns: 1fr;
