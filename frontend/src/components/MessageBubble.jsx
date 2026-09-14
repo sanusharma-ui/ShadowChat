@@ -5,6 +5,7 @@ import {
   Copy,
   CornerUpLeft,
   FileText,
+  MoreHorizontal,
   Pencil,
   SmilePlus,
   Trash2,
@@ -63,6 +64,7 @@ export default function MessageBubble({
   onReact,
 }) {
   const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const deleted = message.deletedForEveryone;
   const isSystem = message.type === "system" || message.type === "call";
@@ -128,24 +130,36 @@ export default function MessageBubble({
           </div>
 
           {!deleted ? (
-            <div className="message-tools" aria-label="Message actions">
-              <button type="button" className="message-tool" title="Reply" aria-label="Reply to message" onClick={onStartReply}><CornerUpLeft size={14} aria-hidden="true" /></button>
-              <button type="button" className="message-tool" title={copied ? "Copied" : "Copy"} aria-label={copied ? "Message copied" : "Copy message"} onClick={copyMessage} disabled={!message.text}><Copy size={14} aria-hidden="true" /></button>
+            <>
+              <button
+                type="button"
+                className="message-actions-trigger"
+                title="Message actions"
+                aria-label="Show message actions"
+                aria-expanded={actionsOpen}
+                onClick={() => setActionsOpen((open) => !open)}
+              >
+                <MoreHorizontal size={16} aria-hidden="true" />
+              </button>
+              <div className={`message-tools ${actionsOpen ? "open" : ""}`} aria-label="Message actions">
+              <button type="button" className="message-tool" title="Reply" aria-label="Reply to message" onClick={() => { onStartReply(); setActionsOpen(false); }}><CornerUpLeft size={14} aria-hidden="true" /></button>
+              <button type="button" className="message-tool" title={copied ? "Copied" : "Copy"} aria-label={copied ? "Message copied" : "Copy message"} onClick={() => { copyMessage(); setActionsOpen(false); }} disabled={!message.text}><Copy size={14} aria-hidden="true" /></button>
               <button type="button" className="message-tool" title="React" aria-label="React to message" aria-expanded={reactionsOpen} onClick={() => setReactionsOpen((open) => !open)}><SmilePlus size={14} aria-hidden="true" /></button>
               {isMine ? (
                 <>
-                  <button type="button" className="message-tool" title="Edit" aria-label="Edit message" onClick={onStartEdit} disabled={!message.text}><Pencil size={14} aria-hidden="true" /></button>
-                  <button type="button" className="message-tool danger" title="Delete" aria-label="Delete message" onClick={onDelete}><Trash2 size={14} aria-hidden="true" /></button>
+                  <button type="button" className="message-tool" title="Edit" aria-label="Edit message" onClick={() => { onStartEdit(); setActionsOpen(false); }} disabled={!message.text}><Pencil size={14} aria-hidden="true" /></button>
+                  <button type="button" className="message-tool danger" title="Delete" aria-label="Delete message" onClick={() => { onDelete(); setActionsOpen(false); }}><Trash2 size={14} aria-hidden="true" /></button>
                 </>
               ) : null}
               {reactionsOpen ? (
                 <div className="message-reaction-picker">
                   {quickReactions.map((emoji) => (
-                    <button key={emoji} type="button" onClick={() => { onReact(emoji); setReactionsOpen(false); }} aria-label={`React with ${emoji}`}>{emoji}</button>
+                    <button key={emoji} type="button" onClick={() => { onReact(emoji); setReactionsOpen(false); setActionsOpen(false); }} aria-label={`React with ${emoji}`}>{emoji}</button>
                   ))}
                 </div>
               ) : null}
             </div>
+            </>
           ) : null}
         </article>
         <ReactionStrip reactions={message.reactions} onReact={onReact} />
