@@ -27,7 +27,7 @@ export default function Avatar({ name, src, size = "md", online = false }) {
       ) : (
         <UserRound size={18} />
       )}
-      {online ? <i className="avatar-online-dot" /> : null}
+      {online ? <i className="avatar-online-dot" aria-hidden="true" /> : null}
     </div>
   );
 }

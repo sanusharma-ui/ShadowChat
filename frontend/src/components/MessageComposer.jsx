@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Paperclip, Send, Square, X } from "lucide-react";
+import { LoaderCircle, Mic, Paperclip, Send, Smile, Square, X } from "lucide-react";
 
-const emojiBar = ["❤️", "🔥", "😂", "👍", "😮", "🎉", "👏", "🥹"];
+const quickEmoji = ["❤️", "🔥", "😂", "👍", "😮", "🎉", "👏", "🥹"];
 
 export default function MessageComposer({
   disabled,
@@ -18,20 +18,29 @@ export default function MessageComposer({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const typingTimerRef = useRef(null);
+  const composingRef = useRef(false);
 
   useEffect(() => {
     if (editingMessage) setText(editingMessage.text || "");
   }, [editingMessage]);
 
   useEffect(() => {
-    return () => {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    };
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
+  }, [text]);
+
+  useEffect(() => () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
   }, []);
 
   function emitTyping() {
@@ -41,8 +50,8 @@ export default function MessageComposer({
   }
 
   async function handleSubmit(event) {
-    event.preventDefault();
-    if (disabled || busy) return;
+    event?.preventDefault();
+    if (disabled || busy || composingRef.current) return;
     const value = text.trim();
     if (!value) return;
 
@@ -51,6 +60,7 @@ export default function MessageComposer({
     try {
       await onSendText(value);
       setText("");
+      setEmojiOpen(false);
       onTypingStop?.();
     } catch (err) {
       setError(err.message);
@@ -67,6 +77,7 @@ export default function MessageComposer({
     try {
       await onUploadMedia(file, text.trim());
       setText("");
+      setEmojiOpen(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -78,6 +89,7 @@ export default function MessageComposer({
   async function startRecording() {
     try {
       setError("");
+      setEmojiOpen(false);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
@@ -87,9 +99,7 @@ export default function MessageComposer({
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        const file = new File([blob], `voice-note-${Date.now()}.webm`, {
-          type: blob.type || "audio/webm",
-        });
+        const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: blob.type || "audio/webm" });
         setBusy(true);
         try {
           await onUploadVoice(file);
@@ -103,7 +113,7 @@ export default function MessageComposer({
       mediaRecorderRef.current = recorder;
       setRecording(true);
     } catch {
-      setError("Microphone access denied or unavailable.");
+      setError("Microphone access was denied or is unavailable.");
     }
   }
 
@@ -112,128 +122,95 @@ export default function MessageComposer({
     setRecording(false);
   }
 
-  const bannerLabel = editingMessage ? "Edit message" : "Reply";
+  function insertEmoji(emoji) {
+    setText((current) => `${current}${emoji}`);
+    textareaRef.current?.focus();
+  }
+
+  const bannerLabel = editingMessage ? "Editing message" : "Replying to";
   const bannerSub = editingMessage
     ? editingMessage.text
-    : `To ${replyingTo?.sender?.displayName || replyingTo?.sender?.username || "message"}`;
-
+    : replyingTo?.sender?.displayName || replyingTo?.sender?.username || "message";
   const canSend = !disabled && !busy && text.trim().length > 0;
 
   return (
-    <div className="composer-shell glass-panel">
-      {/* ── Reply / Edit banner ── */}
-      {(replyingTo || editingMessage) ? (
-        <div className="composer-banner">
-          <div style={{ minWidth: 0 }}>
-            <strong style={{ fontSize: "0.84rem" }}>{bannerLabel}</strong>
-            <p>{bannerSub}</p>
+    <div className="composer-shell">
+      <div className="composer-inner">
+        {replyingTo || editingMessage ? (
+          <div className="composer-banner">
+            <div className="composer-banner-copy">
+              <strong>{bannerLabel}</strong>
+              <p>{bannerSub}</p>
+            </div>
+            <button type="button" className="icon-button quiet small" onClick={editingMessage ? onCancelEdit : onCancelReply} title="Cancel" aria-label="Cancel reply or edit">
+              <X size={15} aria-hidden="true" />
+            </button>
           </div>
-          <button
-            type="button"
-            className="icon-button soft"
-            onClick={editingMessage ? onCancelEdit : onCancelReply}
-            style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0 }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ) : null}
+        ) : null}
 
-      {/* ── Error ── */}
-      {error ? <div className="error-banner composer-error">{error}</div> : null}
+        {error ? <div className="error-banner composer-error" role="alert">{error}</div> : null}
 
-      {/* ── Quick Emoji Bar ── */}
-      <div className="emoji-row">
-        {emojiBar.map((emoji) => (
-          <button
-            key={emoji}
-            className="emoji-button"
-            type="button"
-            onClick={() => setText((prev) => `${prev}${emoji}`)}
-          >
-            {emoji}
+        <form className={`composer-form ${recording ? "is-recording" : ""}`} onSubmit={handleSubmit}>
+          <button type="button" className="composer-action" onClick={() => fileInputRef.current?.click()} disabled={disabled || busy || recording} title="Attach file" aria-label="Attach a file">
+            <Paperclip size={20} aria-hidden="true" />
           </button>
-        ))}
+          <input ref={fileInputRef} type="file" hidden accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={handleFileChange} />
+
+          {recording ? (
+            <div className="recording-indicator" role="status" aria-live="polite">
+              <span className="record-dot" aria-hidden="true" />
+              <span>Recording voice message…</span>
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              placeholder={disabled ? "Choose a conversation to start messaging" : "Write a message"}
+              aria-label="Message"
+              value={text}
+              disabled={disabled || busy}
+              onChange={(event) => { setText(event.target.value); emitTyping(); }}
+              onCompositionStart={() => { composingRef.current = true; }}
+              onCompositionEnd={() => { composingRef.current = false; }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  handleSubmit(event);
+                }
+              }}
+              onBlur={() => onTypingStop?.()}
+              rows={1}
+            />
+          )}
+
+          {!recording ? (
+            <>
+              <div className="emoji-control">
+                <button type="button" className="composer-action" onClick={() => setEmojiOpen((open) => !open)} disabled={disabled || busy} title="Add emoji" aria-label="Add emoji" aria-expanded={emojiOpen}>
+                  <Smile size={20} aria-hidden="true" />
+                </button>
+                {emojiOpen ? (
+                  <div className="composer-emoji-picker" role="group" aria-label="Choose an emoji">
+                    {quickEmoji.map((emoji) => (
+                      <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insert ${emoji}`}>{emoji}</button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <button type="button" className="composer-action" onClick={startRecording} disabled={disabled || busy} title="Record voice message" aria-label="Record a voice message">
+                <Mic size={20} aria-hidden="true" />
+              </button>
+            </>
+          ) : (
+            <button type="button" className="composer-action stop-recording" onClick={stopRecording} title="Stop recording" aria-label="Stop recording">
+              <Square size={18} aria-hidden="true" />
+            </button>
+          )}
+
+          <button className="composer-send" type="submit" disabled={!canSend || recording} title={busy ? "Sending" : "Send message"} aria-label={busy ? "Sending message" : "Send message"}>
+            {busy ? <LoaderCircle className="spin" size={19} aria-hidden="true" /> : <Send size={19} aria-hidden="true" />}
+          </button>
+        </form>
       </div>
-
-      {/* ── Composer form ── */}
-      <form className="composer-form" onSubmit={handleSubmit}>
-        {/* Attach file */}
-        <button
-          type="button"
-          className="icon-button soft"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || busy}
-          title="Attach file"
-        >
-          <Paperclip size={18} />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          hidden
-          accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
-          onChange={handleFileChange}
-        />
-
-        {/* Text area */}
-        {recording ? (
-          <div className="recording-indicator">
-            <div className="record-dot" />
-            Recording…
-          </div>
-        ) : (
-          <textarea
-            placeholder={disabled ? "Choose a chat to start messaging" : "Type a message…"}
-            value={text}
-            disabled={disabled || busy}
-            onChange={(e) => {
-              setText(e.target.value);
-              emitTyping();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            onBlur={() => onTypingStop?.()}
-            rows={1}
-          />
-        )}
-
-        {/* Mic / Stop */}
-        {!recording ? (
-          <button
-            type="button"
-            className="icon-button soft"
-            onClick={startRecording}
-            disabled={disabled || busy}
-            title="Voice note"
-          >
-            <Mic size={18} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="icon-button danger"
-            onClick={stopRecording}
-            title="Stop recording"
-          >
-            <Square size={18} />
-          </button>
-        )}
-
-        {/* Send */}
-        <button
-          className="primary-icon-button"
-          type="submit"
-          disabled={!canSend}
-          title="Send"
-        >
-          <Send size={18} />
-        </button>
-      </form>
     </div>
   );
 }

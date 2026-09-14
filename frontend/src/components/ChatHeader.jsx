@@ -1,29 +1,26 @@
-import { Info, Menu, Phone, Video } from "lucide-react";
+import { ArrowLeft, Info, Phone, Video } from "lucide-react";
 import Avatar from "./Avatar";
 import { getConversationAvatar, getConversationSubtitle, getConversationTitle } from "../utils/chat";
 
 export default function ChatHeader({
   conversation,
   currentUserId,
+  typingUsers = [],
+  socketConnected,
   onOpenProfile,
   onStartCall,
   onToggleSidebar,
 }) {
   if (!conversation) {
     return (
-      <header className="chat-header glass-panel">
+      <header className="chat-header">
         <div className="chat-header-main">
-          <button
-            className="icon-button mobile-menu-button"
-            type="button"
-            title="Chats"
-            onClick={onToggleSidebar}
-          >
-            <Menu size={18} />
+          <button className="icon-button quiet mobile-menu-button" type="button" title="Show conversations" aria-label="Show conversations" onClick={onToggleSidebar}>
+            <ArrowLeft size={19} aria-hidden="true" />
           </button>
-          <div>
-            <strong>Select a conversation</strong>
-            <p>Pick a chat from the sidebar or start a new one.</p>
+          <div className="chat-heading-copy">
+            <strong>ShadowChat</strong>
+            <p>Private messaging, connected in real time</p>
           </div>
         </div>
       </header>
@@ -31,56 +28,39 @@ export default function ChatHeader({
   }
 
   const title = getConversationTitle(conversation, currentUserId);
-  const subtitle = getConversationSubtitle(conversation, currentUserId);
+  const defaultSubtitle = getConversationSubtitle(conversation, currentUserId);
   const avatar = getConversationAvatar(conversation, currentUserId);
-  const isOnline = conversation.type === "direct" && subtitle === "Online";
+  const isOnline = conversation.type === "direct" && defaultSubtitle === "Online";
+  const isTyping = typingUsers.length > 0;
+  const subtitle = isTyping
+    ? `${typingUsers.map((user) => user.displayName || user.username || "Someone").join(", ")} typing…`
+    : defaultSubtitle;
 
   return (
-    <header className="chat-header glass-panel">
+    <header className="chat-header">
       <div className="chat-header-main">
-        <button
-          className="icon-button mobile-menu-button"
-          type="button"
-          title="Chats"
-          onClick={onToggleSidebar}
-        >
-          <Menu size={18} />
+        <button className="icon-button quiet mobile-menu-button" type="button" title="Back to conversations" aria-label="Back to conversations" onClick={onToggleSidebar}>
+          <ArrowLeft size={19} aria-hidden="true" />
         </button>
-
         <Avatar name={title} src={avatar} online={isOnline} size="md" />
-
-        <div>
+        <div className="chat-heading-copy">
           <strong>{title}</strong>
-          <p style={{ color: isOnline ? "var(--success)" : undefined }}>{subtitle}</p>
+          <p className={isTyping ? "presence-text typing" : isOnline ? "presence-text online" : "presence-text"}>
+            {subtitle}
+          </p>
         </div>
       </div>
 
       <div className="chat-header-actions">
-        <button
-          className="icon-button"
-          type="button"
-          title="Voice call"
-          onClick={() => onStartCall("audio")}
-          disabled={conversation.type !== "direct"}
-        >
-          <Phone size={17} />
+        {!socketConnected ? <span className="header-connection-dot" title="Reconnecting" aria-label="Reconnecting" /> : null}
+        <button className="icon-button quiet" type="button" title="Audio call" aria-label={`Start audio call with ${title}`} onClick={() => onStartCall("audio")} disabled={conversation.type !== "direct"}>
+          <Phone size={18} aria-hidden="true" />
         </button>
-        <button
-          className="icon-button"
-          type="button"
-          title="Video call"
-          onClick={() => onStartCall("video")}
-          disabled={conversation.type !== "direct"}
-        >
-          <Video size={17} />
+        <button className="icon-button quiet" type="button" title="Video call" aria-label={`Start video call with ${title}`} onClick={() => onStartCall("video")} disabled={conversation.type !== "direct"}>
+          <Video size={18} aria-hidden="true" />
         </button>
-        <button
-          className="icon-button"
-          type="button"
-          title="Conversation info"
-          onClick={onOpenProfile}
-        >
-          <Info size={17} />
+        <button className="icon-button quiet" type="button" title="Conversation information" aria-label="Conversation information" onClick={onOpenProfile}>
+          <Info size={18} aria-hidden="true" />
         </button>
       </div>
     </header>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import api from "../lib/api";
 import { createSocket } from "../lib/socket";
 import { useAuth } from "../contexts/AuthContext";
@@ -137,6 +138,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [conversationLoadFailed, setConversationLoadFailed] = useState(false);
+  const [messageLoadFailed, setMessageLoadFailed] = useState(false);
   const [conversationFilter, setConversationFilter] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
@@ -203,8 +206,10 @@ export default function ChatPage() {
         const matched = list.find((item) => item._id === prev._id);
         return matched || list[0];
       });
+      setConversationLoadFailed(false);
       setStatusError("");
     } catch (error) {
+      setConversationLoadFailed(true);
       setStatusError(error.message || "Failed to load conversations");
     } finally {
       setLoadingConversations(false);
@@ -215,6 +220,7 @@ export default function ChatPage() {
     if (!conversationId) return;
 
     setLoadingMessages(true);
+    setMessageLoadFailed(false);
     try {
       const response = await api.get(`/conversations/${conversationId}/messages`, {
         params: {
@@ -230,8 +236,10 @@ export default function ChatPage() {
 
       const nextMessages = Array.isArray(response.data?.data) ? response.data.data : [];
       setMessages(nextMessages.map((message) => normalizeMessageForUi(message, profile)).filter(Boolean));
+      setMessageLoadFailed(false);
       setStatusError("");
     } catch (error) {
+      setMessageLoadFailed(true);
       setStatusError(error.message || "Failed to load messages");
     } finally {
       setLoadingMessages(false);
@@ -246,10 +254,26 @@ export default function ChatPage() {
       } else {
         await api.post("/messages/seen", { conversationId, messageId });
       }
+
+      const readAt = new Date().toISOString();
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          String(conversation._id) !== String(conversationId)
+            ? conversation
+            : {
+                ...conversation,
+                participants: (conversation.participants || []).map((participant) =>
+                  String(participant.user?._id || participant.user) === String(profile?._id)
+                    ? { ...participant, lastReadAt: readAt, lastReadMessage: messageId || participant.lastReadMessage }
+                    : participant
+                )
+              }
+        )
+      );
     } catch (error) {
       console.error("markSeen failed:", error.message);
     }
-  }, []);
+  }, [profile?._id]);
 
   useEffect(() => {
     if (!profile?._id) return;
@@ -312,6 +336,7 @@ export default function ChatPage() {
       refreshAfterConnect();
     });
     socket.on("disconnect", () => setSocketConnected(false));
+    socket.on("connect_error", () => setSocketConnected(false));
     if (socket.connected) queueMicrotask(() => {
       setSocketConnected(true);
       refreshAfterConnect();
@@ -387,6 +412,30 @@ export default function ChatPage() {
     socket.on(SOCKET_EVENTS.MESSAGE_REACTION, (message) => {
       const normalized = normalizeMessageForUi(message, profile);
       setMessages((prev) => prev.map((item) => (item._id === normalized?._id ? normalized : item)));
+    });
+
+    socket.on(SOCKET_EVENTS.MESSAGE_SEEN, ({ conversationId, messageId, userId }) => {
+      setMessages((prev) => {
+        const pivot = messageId ? prev.find((item) => String(item._id) === String(messageId)) : null;
+        const pivotTime = pivot?.createdAt ? new Date(pivot.createdAt).getTime() : Infinity;
+
+        return prev.map((message) => {
+          if (
+            String(message.conversation) !== String(conversationId) ||
+            new Date(message.createdAt).getTime() > pivotTime ||
+            (message.seenBy || []).some(
+              (seen) => String(seen.user?._id || seen.user) === String(userId)
+            )
+          ) {
+            return message;
+          }
+
+          return {
+            ...message,
+            seenBy: [...(message.seenBy || []), { user: userId, seenAt: new Date().toISOString() }]
+          };
+        });
+      });
     });
 
     socket.on(SOCKET_EVENTS.TYPING_START, ({ conversationId, user }) => {
@@ -887,9 +936,12 @@ export default function ChatPage() {
   }
 
   const emptyState = (
-    <div className="chat-placeholder glass-panel">
-      <h2>ShadowChat</h2>
-      <p>Start a direct conversation, create a group, and chat in real time with Firebase-backed login.</p>
+    <div className="chat-placeholder">
+      <div className="chat-placeholder-mark">
+        <ShieldCheck size={35} aria-hidden="true" />
+      </div>
+      <h2>Your private conversations</h2>
+      <p>Select a conversation to start messaging.</p>
     </div>
   );
 
@@ -910,6 +962,8 @@ export default function ChatPage() {
           onLogout={handleLogout}
           conversationFilter={conversationFilter}
           setConversationFilter={setConversationFilter}
+          typingByConversation={typingByConversation}
+          socketConnected={socketConnected}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={() => setMobileSidebarOpen(false)}
         />
@@ -917,24 +971,57 @@ export default function ChatPage() {
           <ChatHeader
             conversation={activeConversation}
             currentUserId={profile?._id}
+            typingUsers={currentTypingUsers}
+            socketConnected={socketConnected}
             onOpenProfile={() => setInfoOpen(true)}
             onStartCall={startCall}
             onToggleSidebar={() => setMobileSidebarOpen(true)}
           />
 
-          {statusError ? <div className="error-banner floating-banner">{statusError}</div> : null}
-          {statusMessage ? <div className="success-banner floating-banner">{statusMessage}</div> : null}
+          <div className="status-announcer" aria-live="polite" aria-atomic="true">
+            {!socketConnected && profile?._id ? (
+              <div className="connection-banner" role="status">
+                <LoaderCircle className="spin" size={14} aria-hidden="true" />
+                Reconnecting to real-time messages…
+              </div>
+            ) : null}
+            {statusError && !conversationLoadFailed && !messageLoadFailed ? (
+              <div className="error-banner floating-banner" role="alert">{statusError}</div>
+            ) : null}
+            {statusMessage ? <div className="success-banner floating-banner">{statusMessage}</div> : null}
+          </div>
 
           {loadingConversations ? (
-            <div className="glass-panel loading-zone">Loading conversations...</div>
+            <div className="loading-zone" role="status">
+              <LoaderCircle className="spin" size={22} aria-hidden="true" />
+              <span>Loading conversations…</span>
+            </div>
+          ) : conversationLoadFailed && !conversations.length ? (
+            <div className="load-failed-state" role="alert">
+              <div className="empty-state-icon"><RefreshCw size={20} aria-hidden="true" /></div>
+              <h2>Couldn’t load conversations</h2>
+              <p>Check your connection and try again.</p>
+              <button type="button" className="secondary-button slim" onClick={loadConversations}>Try again</button>
+            </div>
           ) : activeConversation ? (
             <>
               {loadingMessages ? (
-                <div className="glass-panel loading-zone">Loading messages...</div>
+                <div className="loading-zone" role="status">
+                  <LoaderCircle className="spin" size={22} aria-hidden="true" />
+                  <span>Loading messages…</span>
+                </div>
+              ) : messageLoadFailed ? (
+                <div className="load-failed-state" role="alert">
+                  <div className="empty-state-icon"><RefreshCw size={20} aria-hidden="true" /></div>
+                  <h2>Couldn’t load this conversation</h2>
+                  <p>Your messages are still safe. Try loading them again.</p>
+                  <button type="button" className="secondary-button slim" onClick={() => loadMessages(activeConversation._id)}>Try again</button>
+                </div>
               ) : (
                 <MessageList
                   messages={messages}
                   currentUserId={profile?._id}
+                  conversationType={activeConversation.type}
                   typingUsers={currentTypingUsers}
                   onDeleteMessage={handleDeleteMessage}
                   onReplyMessage={setReplyingTo}
